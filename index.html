@@ -295,7 +295,6 @@ $('rec').onclick=async function(){
  if(recording)return;
  var mime=pickMime();
  if(!mime){$('msg').textContent='Browser ini tidak mendukung perekaman video. Coba Chrome, Edge, atau Firefox di komputer.';return}
- var dl=null;try{dl=await claude.use('downloads')}catch(e){}
  stop();recording=true;$('rec').disabled=true;$('play').disabled=true;
  await loadFont();
  var D=dur(),stream=cv.captureStream(30),chunks=[];
@@ -325,13 +324,20 @@ $('rec').onclick=async function(){
  var ext=mime.indexOf('mp4')>-1?'mp4':'webm';
  var blob=new Blob(chunks,{type:mime.split(';')[0]});
  recording=false;$('rec').disabled=false;$('play').disabled=false;curT=0;sync();draw(0);
- if(dl&&dl.save){
-  try{await dl.save({filename:'reels-teks.'+ext,data:blob});$('msg').textContent='Video siap: reels-teks.'+ext+(ext==='webm'?' (format WebM, bisa dikonversi ke MP4 bila perlu).':'.')}
-  catch(e){$('msg').textContent=(e&&e.code==='declined')?'Unduhan dibatalkan. Tekan rekam lagi bila ingin mengulang.':'Gagal menyimpan video: '+((e&&e.message)||'coba lagi')}
- }else{
-  var u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='reels-teks.'+ext;a.click();
-  $('msg').textContent='Video selesai direkam. Jika unduhan tidak muncul, buka halaman ini di tab sendiri lalu coba lagi.';
- }
+
+ if(window._lastVidUrl)URL.revokeObjectURL(window._lastVidUrl);
+ var fname='reels-teks.'+ext;
+ var u=URL.createObjectURL(blob);
+ window._lastVidUrl=u;
+
+ var a=document.createElement('a');
+ a.href=u;
+ a.download=fname;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+
+ $('msg').innerHTML='Video selesai direkam ('+ext.toUpperCase()+'). Jika tidak terunduh otomatis, <a href="'+u+'" download="'+fname+'" style="color:var(--acc);font-weight:700">klik di sini untuk mengunduh</a>.';
 };
 
 refresh();loadFont();
